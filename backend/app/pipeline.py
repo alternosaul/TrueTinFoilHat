@@ -145,8 +145,8 @@ async def compare_with_wayback(
     await job.emit("wayback", f"Buscando versión archivada cercana a {target[:4]}-{target[4:6]}-{target[6:]}")
     try:
         snap = await wayback.closest_snapshot(url, target)
-    except Exception as e:  # noqa: BLE001 — Wayback es best-effort
-        await job.emit("wayback", f"Wayback Machine no respondió: {e}")
+    except wayback.WaybackUnavailable as e:  # best-effort: el análisis en vivo ya está guardado
+        await job.emit("wayback", f"{e}. Vuelve a analizar más tarde para obtener la comparación.")
         return None
     if not snap:
         await job.emit("wayback", "No hay versiones archivadas de esta URL")

@@ -3,12 +3,20 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+import asyncio
+
 import httpx
 
 from app.config import get_settings
 
 AVAILABILITY_URL = "https://archive.org/wayback/available"
 CDX_URL = "https://web.archive.org/cdx/search/cdx"
+RETRIES = 3
+RETRY_DELAY = 2.0
+
+
+class WaybackUnavailable(RuntimeError):
+    pass
 
 
 @dataclass
@@ -45,13 +53,18 @@ async def closest_snapshot(url: str, timestamp: str) -> Snapshot | None:
     """Snapshot más cercano a `timestamp`. La availability API a veces no encuentra nada que sí está en CDX."""
     errors: list[Exception] = []
     for finder in (_closest_availability, _closest_cdx):
-        try:
-            if snap := await finder(url, timestamp):
-                return snap
-        except (httpx.HTTPError, ValueError) as e:
-            errors.append(e)
-    if len(errors) == 2:
-        raise errors[-1]
+        for attempt in range(RETRIES):
+            try:
+                if snap := await finder(url, timestamp):
+                    return snap
+                break
+            except (httpx.HTTPError, ValueError) as e:  # Wayback devuelve 503 / página "offline" a menudo
+                errors.append(e)
+                if attempt < RETRIES - 1:
+                    await asyncio.sleep(RETRY_DELAY * (attempt + 1))
+    if errors:
+        # no podemos afirmar que no haya snapshots si alguna consulta falló
+        raise WaybackUnavailable(f"Wayback Machine no disponible ({errors[-1]})") from errors[-1]
     return None
 
 

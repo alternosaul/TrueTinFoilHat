@@ -1,11 +1,26 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, TypeDecorator, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+class UTCDateTime(TypeDecorator):
+    """SQLite no guarda zona horaria: guardamos UTC y la restauramos al leer."""
+
+    impl = DateTime
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):  # noqa: ANN001, ANN201
+        if value is not None and value.tzinfo is not None:
+            value = value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value
+
+    def process_result_value(self, value, dialect):  # noqa: ANN001, ANN201
+        return value.replace(tzinfo=timezone.utc) if value is not None and value.tzinfo is None else value
 
 
 class Base(DeclarativeBase):
@@ -18,7 +33,7 @@ class Company(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     domain: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
     documents: Mapped[list["Document"]] = relationship(back_populates="company", cascade="all, delete-orphan")
 
@@ -41,9 +56,9 @@ class Analysis(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), index=True)
-    analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    analyzed_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, index=True)
     # última vez que se volvió a pedir este análisis y el texto seguía idéntico (cache hit)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
     source: Mapped[str] = mapped_column(String(10))  # live | wayback
     snapshot_ts: Mapped[str | None] = mapped_column(String(14), nullable=True)  # YYYYMMDDhhmmss (Wayback)
     content_hash: Mapped[str] = mapped_column(String(64), index=True)
@@ -84,6 +99,6 @@ class Comparison(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     old_analysis_id: Mapped[int] = mapped_column(ForeignKey("analyses.id"))
     new_analysis_id: Mapped[int] = mapped_column(ForeignKey("analyses.id"), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     changes: Mapped[list] = mapped_column(JSON, default=list)

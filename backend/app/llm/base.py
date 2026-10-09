@@ -76,7 +76,8 @@ def diff_system_prompt(lang: str) -> str:
     return (
         "Comparas dos versiones de unos términos de servicio o política de privacidad. Recibes una lista de "
         "cambios (añadido, eliminado, modificado) con el texto anterior y el nuevo. Para cada cambio indica si "
-        "es better, worse o neutral para el usuario y explícalo en una frase simple. Luego da un resumen general. "
+        "es better, worse o neutral para el usuario y explica en una frase simple qué cambia para él (sin repetir la "
+        "etiqueta better/worse/neutral en la explicación). Luego da un resumen general. "
         f"Responde en {LANG_NAMES.get(lang, lang)}. Ignora cambios puramente cosméticos (marcándolos neutral)."
     )
 

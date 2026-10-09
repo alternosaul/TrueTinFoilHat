@@ -1,4 +1,5 @@
 import httpx
+import pytest
 import respx
 
 from app import wayback
@@ -36,12 +37,23 @@ async def test_closest_snapshot_falls_back_to_cdx():
 
 
 @respx.mock
-async def test_closest_snapshot_offline_html_raises():
-    respx.get(wayback.AVAILABILITY_URL).mock(return_value=httpx.Response(503))
+async def test_closest_snapshot_offline_raises(monkeypatch):
+    monkeypatch.setattr(wayback, "RETRY_DELAY", 0)
+    respx.get(wayback.AVAILABILITY_URL).mock(return_value=httpx.Response(200, json={"archived_snapshots": {}}))
     respx.get(wayback.CDX_URL).mock(return_value=httpx.Response(200, text="<html>Temporarily Offline</html>"))
-    import pytest
-    with pytest.raises(ValueError):
+    with pytest.raises(wayback.WaybackUnavailable):
         await wayback.closest_snapshot("https://e.com/t", "20251008")
+
+
+@respx.mock
+async def test_closest_snapshot_retries_503(monkeypatch):
+    monkeypatch.setattr(wayback, "RETRY_DELAY", 0)
+    respx.get(wayback.AVAILABILITY_URL).mock(return_value=httpx.Response(200, json={"archived_snapshots": {}}))
+    respx.get(wayback.CDX_URL).mock(side_effect=[
+        httpx.Response(503), httpx.Response(200, json=[["timestamp", "original"], ["20251005161849", "https://e.com/t"]]),
+    ])
+    snap = await wayback.closest_snapshot("https://e.com/t", "20251008")
+    assert snap and snap.timestamp == "20251005161849"
 
 
 @respx.mock
