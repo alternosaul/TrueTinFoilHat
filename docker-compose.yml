@@ -1,0 +1,23 @@
+# Local:  docker compose --profile local up      (app + Ollama)
+# Hosted: MODE=hosted docker compose up          (solo app, BYOK)
+services:
+  app:
+    build: { context: ., dockerfile: backend/Dockerfile }
+    ports: ["8000:8000"]
+    environment:
+      MODE: ${MODE:-local}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:14b}
+      ANTHROPIC_DEFAULT_MODEL: ${ANTHROPIC_DEFAULT_MODEL:-claude-haiku-5-5}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
+    volumes: ["ttfh-data:/data"]
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["local"]
+    volumes: ["ollama:/root/.ollama"]
+    ports: ["11434:11434"]
+
+volumes:
+  ttfh-data:
+  ollama:
