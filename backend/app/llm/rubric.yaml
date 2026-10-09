@@ -1,0 +1,78 @@
+# Rúbrica fija para clasificar cláusulas. Cambia `version` cuando modifiques criterios:
+# los análisis guardados registran la versión con la que se hicieron.
+version: "2026.10-1"
+colors:
+  green: Neutral o favorable para el usuario; práctica estándar y razonable, o protege derechos del usuario.
+  yellow: Merece atención; ambigua, amplia o con impacto moderado; el usuario puede mitigarlo (opt-out, ajustes).
+  red: Perjudica claramente al usuario; renuncia de derechos, uso amplio de datos o poder unilateral de la empresa.
+categories:
+  data_sharing:
+    label: Venta o compartición de datos con terceros
+    red: Vende datos, o los comparte con anunciantes/brokers sin opt-out claro.
+    yellow: Comparte con "socios" o afiliados de forma amplia o vaga.
+    green: Solo comparte con proveedores necesarios para el servicio, bajo contrato.
+  tracking:
+    label: Rastreo y publicidad
+    red: Rastreo entre sitios/apps, fingerprinting, o perfilado publicitario sin opt-out.
+    yellow: Cookies de publicidad con opt-out, analítica de terceros.
+    green: Solo cookies esenciales o analítica propia anónima.
+  data_retention:
+    label: Retención de datos
+    red: Conserva datos indefinidamente o tras borrar la cuenta sin justificación.
+    yellow: Plazos vagos ("el tiempo necesario").
+    green: Plazos concretos y borrado al cerrar la cuenta.
+  content_license:
+    label: Licencia sobre tu contenido
+    red: Licencia perpetua, irrevocable o sublicenciable sobre tu contenido, o uso para entrenar IA sin opt-out.
+    yellow: Licencia amplia pero limitada a operar/promocionar el servicio.
+    green: Licencia mínima y termina al borrar el contenido.
+  arbitration:
+    label: Arbitraje y renuncia a demandas colectivas
+    red: Arbitraje obligatorio y/o renuncia a class action.
+    yellow: Arbitraje con opción de salirse (opt-out) en un plazo.
+    green: Tribunales ordinarios, sin renuncias.
+  unilateral_changes:
+    label: Cambios unilaterales
+    red: Puede cambiar los términos en cualquier momento sin aviso; el uso continuado implica aceptación.
+    yellow: Cambios con aviso por publicación en la web.
+    green: Aviso previo directo (email) con plazo y opción de cancelar.
+  termination:
+    label: Suspensión o cierre de cuenta
+    red: Puede cerrar tu cuenta sin causa ni aviso, y perder contenido/compras.
+    yellow: Puede suspender por violaciones amplias o vagas.
+    green: Causas claras, aviso y posibilidad de exportar datos.
+  liability:
+    label: Limitación de responsabilidad
+    red: Excluye casi toda responsabilidad, incluso por negligencia o fugas de datos.
+    yellow: Tope de responsabilidad bajo pero estándar.
+    green: Responsabilidad razonable acorde a la ley.
+  payments:
+    label: Pagos, renovación y reembolsos
+    red: Renovación automática difícil de cancelar, sin reembolsos, cambios de precio sin aviso.
+    yellow: Renovación automática con aviso; reembolsos limitados.
+    green: Cancelación sencilla y reembolsos claros.
+  jurisdiction:
+    label: Ley aplicable y jurisdicción
+    red: Jurisdicción lejana o desfavorable que dificulta reclamar.
+    yellow: Ley de otro país pero respeta derechos del consumidor locales.
+    green: Ley/tribunales del usuario.
+  user_rights:
+    label: Derechos del usuario sobre sus datos
+    red: Sin acceso, rectificación o borrado; o derechos solo para ciertas regiones.
+    yellow: Derechos existentes pero con proceso complicado.
+    green: Acceso, portabilidad y borrado fáciles.
+  security:
+    label: Seguridad y notificación de brechas
+    red: Sin compromiso de seguridad ni notificación de brechas.
+    yellow: Compromiso genérico.
+    green: Medidas concretas y notificación de incidentes.
+  children:
+    label: Menores
+    red: Recoge datos de menores sin consentimiento parental.
+    yellow: Edad mínima sin verificación.
+    green: Protecciones explícitas para menores.
+  other:
+    label: Otros / informativo
+    red: Cualquier otra cláusula claramente abusiva.
+    yellow: Cualquier otra cláusula que merezca atención.
+    green: Definiciones, información de contacto, texto informativo.
