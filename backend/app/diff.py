@@ -12,14 +12,14 @@ SAME_HEADING_BONUS = 15  # misma sección → más probable que sea la misma cl�
 MAX_CHANGE_TEXT = 1500
 
 
-def _norm(text: str) -> str:
+def normalize_text(text: str) -> str:
     return re.sub(r"\W+", " ", text.lower()).strip()
 
 
 def align(old: list[Segment], new: list[Segment]) -> list[dict]:
     """Devuelve cambios: [{id, type: added|removed|modified, old_idx, new_idx, old_text, new_text, similarity}]."""
-    old_n = [_norm(s.text) for s in old]
-    new_n = [_norm(s.text) for s in new]
+    old_n = [normalize_text(s.text) for s in old]
+    new_n = [normalize_text(s.text) for s in new]
 
     matcher = difflib.SequenceMatcher(a=old_n, b=new_n, autojunk=False)
     unmatched_old: list[int] = []

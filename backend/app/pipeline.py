@@ -13,11 +13,11 @@ from app import wayback
 from app.config import get_settings
 from app.db.models import Analysis, Clause, Company, Comparison, Document
 from app.db.session import SessionLocal
-from app.diff import align, for_llm
+from app.diff import align, for_llm, normalize_text
 from app.extract.fetch import ExtractedDoc, fetch_document
 from app.extract.segment import Segment, segment
 from app.jobs import Job
-from app.llm.base import LLMError, Provider, normalize_verdicts, rubric_version
+from app.llm.base import ClauseVerdict, LLMError, Provider, normalize_verdicts, rubric_version
 
 log = logging.getLogger(__name__)
 
@@ -86,9 +86,13 @@ async def classify_all(provider: Provider, segments: list[Segment], lang: str, j
 
 async def analyze_doc(
     db: Session, provider: Provider, document: Document, extracted: ExtractedDoc, lang: str, job: Job,
-    source: str, snapshot_ts: str | None = None, label: str = "versión actual",
+    source: str, snapshot_ts: str | None = None, label: str = "versión actual", reuse_from: Analysis | None = None,
 ) -> tuple[Analysis, list[Segment], bool]:
-    """Analiza (o reutiliza de cache) un texto. Devuelve (analysis, segmentos, cache_hit)."""
+    """Analiza (o reutiliza de cache) un texto. Devuelve (analysis, segmentos, cache_hit).
+
+    Con `reuse_from`, las cláusulas cuyo texto es idéntico a una de ese análisis copian su veredicto
+    en vez de volver a pasar por el LLM (entre versiones de un mismo documento, casi todo coincide).
+    """
     segments = segment(extracted.text)[:MAX_SEGMENTS]
     cached = db.scalar(
         select(Analysis)
@@ -104,7 +108,18 @@ async def analyze_doc(
         return cached, segments, True
 
     await job.emit("segmenting", f"{len(segments)} cláusulas detectadas ({label})", total=len(segments))
-    verdicts = await classify_all(provider, segments, lang, job, label)
+    known = {normalize_text(c.text): c for c in reuse_from.clauses} if reuse_from else {}
+    todo = [s for s in segments if normalize_text(s.text) not in known]
+    if len(todo) < len(segments):
+        await job.emit("cache", f"{len(segments) - len(todo)} cláusulas idénticas a la otra versión; "
+                                f"se clasifican solo {len(todo)} ({label})")
+    fresh = {v.idx: v for v in (await classify_all(provider, todo, lang, job, label) if todo else [])}
+    verdicts = []
+    for s in segments:
+        if (v := fresh.get(s.idx)) is None:
+            c = known[normalize_text(s.text)]
+            v = ClauseVerdict(idx=s.idx, color=c.color, category=c.category, explanation=c.explanation)
+        verdicts.append(v)
     counts = {c: sum(v.color == c for v in verdicts) for c in ("green", "yellow", "red")}
     analysis = Analysis(
         document_id=document.id, source=source, snapshot_ts=snapshot_ts, content_hash=extracted.content_hash,
@@ -142,7 +157,7 @@ async def compare_with_wayback(
     old_doc = await fetch_document(url, html=html)
     old_analysis, old_segments, _ = await analyze_doc(
         db, provider, document, old_doc, lang, job, source="wayback", snapshot_ts=snap.timestamp,
-        label=f"versión {snap.date:%Y-%m}",
+        label=f"versión {snap.date:%Y-%m}", reuse_from=current,
     )
 
     existing = db.scalar(select(Comparison).where(

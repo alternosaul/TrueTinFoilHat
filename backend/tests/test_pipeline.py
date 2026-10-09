@@ -15,17 +15,18 @@ def page(*clauses: str) -> str:
     return f"<html><head><title>Example Terms</title></head><body><article><h1>Terms</h1>{body}</article></body></html>"
 
 
-OLD = page(
+OLD_CLAUSES = (
     "We collect your email address so that you can log in and receive important account notifications.",
     "We never sell your personal data to anyone, and we only share it with service providers under contract.",
     "You may close your account at any time and we will delete your data within thirty days of the request.",
 )
-NEW = page(
+NEW_CLAUSES = (
     "We collect your email address so that you can log in and receive important account notifications.",
     "We may sell your personal data to advertising partners and data brokers to improve our offerings.",
     "Any dispute will be resolved by binding arbitration and you waive any right to a class action lawsuit.",
     "We use cookies and similar technologies to measure engagement with our marketing campaigns online.",
 )
+OLD, NEW = page(*OLD_CLAUSES), page(*NEW_CLAUSES)
 
 
 @respx.mock
@@ -42,6 +43,8 @@ async def test_full_pipeline_with_wayback_and_cache():
     assert job.status == "done", job.error
     assert job.result["comparison_id"] is not None
     first_count = provider.classified
+    # 4 cláusulas nuevas + solo las 2 viejas que difieren (la primera es idéntica y se reutiliza)
+    assert first_count == len(NEW_CLAUSES) + 2
 
     with TestClient(app) as client:
         companies = client.get("/api/companies").json()
